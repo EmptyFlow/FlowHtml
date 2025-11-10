@@ -99,16 +99,16 @@ function watchAffectedProperties(callback) {
 
     needWatchaffectedProperties = false;
 }
-function createBindingForContent(element, models) {
-    const content = element.getAttribute('h-content');
-    if (!content) return;
+function createBindingForAttribute(element, attribute, models, contentCallback, contentRequired) {
+    const content = element.getAttribute(attribute);
+    if (contentRequired && !content) return;
 
     const functionItems = models.map(a => a.modelName);
     functionItems.unshift('element');
     
     const functionArguments = models.map(a => a.model)
     functionArguments.unshift(element)
-    const bindingHandler = new Function(...functionItems, `element.innerHTML = ${content}`);
+    const bindingHandler = new Function(...functionItems, contentCallback(content, element, attribute));
     watchAffectedProperties(() => {
         bindingHandler.apply(window, functionArguments)
     });
@@ -123,7 +123,7 @@ function createBindingForContent(element, models) {
         }
     }
 
-    element.removeAttribute('h-content');
+    element.removeAttribute(attribute);
 }
 function createBindingForEvent(element, attribute, models) {
     const clickHandler = element.getAttribute(attribute);
@@ -142,6 +142,12 @@ function createBindingForEvent(element, attribute, models) {
 
     element.removeAttribute(attribute);
 }
+function attributeContentBinding(content, element, attribute) {
+    return `element.setAttribute('${attribute.substring(2)}', ${content})`;
+}
+function contentBinding(content, element, attribute) {
+    return `element.innerHTML = ${content}`;
+}
 function registerBindings() {
     const elements = document.querySelectorAll('[h-model]');
     const modelSelectorBindings = new Map();
@@ -151,11 +157,19 @@ function registerBindings() {
 
         const attributes = element.getAttributeNames()
         for (const attribute of attributes) {
-            // content
-            if (attribute === `h-content`) createBindingForContent(element, modelData);
+            if (attribute === `h-model`) continue;
 
             // events
-            if (attribute.startsWith('e-')) createBindingForEvent(element, attribute, modelData);
+            if (attribute.startsWith('e-')) {
+                createBindingForEvent(element, attribute, modelData);
+                continue;
+            }
+
+            // attributes or content
+            if (attribute.startsWith('h-')) {
+                const isContent = attribute === 'h-content';
+                createBindingForAttribute(element, attribute, modelData, isContent ? contentBinding : attributeContentBinding, isContent ? false : true);
+            }
         }
         
         element.removeAttribute('h-model');

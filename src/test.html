@@ -1,14 +1,36 @@
 <html>
+  <head>
+    <style>
+      .activate-block {
+        color: green;
+      }
+    </style>
+  </head>
 <body>
 <model id="mymodel">
   <property name="count" type="int" default="5" />
+  <property name="attValue" type="string" default="testValue" />
   <property name="clickHandler" type="event-handler" prevent="true" stop="true">
     const { event, model, element } = data
     model.count = model.count + 1;
   </property>
+  <property name="changeAttribute" type="event-handler" prevent="true" stop="true">
+    const { model, element } = data
+    if (model.attValue) {
+      model.attValue = "";
+    } else {
+      model.attValue = "activate-block";
+    }
+  </property>
 </model>
-<span h-model="#mymodel as model" h-content="model.count"></span>
-<button h-model="#mymodel as model" e-click="model.clickHandler({event,model,element})">Add number</button>
+<div style="display: flex; flex-direction: row;">
+  <span h-model="#mymodel as model" h-content="model.count"></span>
+  <span h-model="#mymodel as model" h-class="model.attValue">Text</span>
+</div>
+<div style="display: flex; flex-direction: column;">
+  <button h-model="#mymodel as model" e-click="model.clickHandler({event,model,element})">Add number</button>
+  <button h-model="#mymodel as model" e-click="model.changeAttribute({model,element})">Change attribute</button>
+</div>
 <script src="flowhtml.js"></script>
 <script>
 //import { getModelBySelector } from './flowhtml.js'
