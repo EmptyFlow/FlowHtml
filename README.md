@@ -8,5 +8,6 @@ Reactive JavaScript Library
 - ~~Create binding for HTML events (e-X)~~
 - Create binding for loops
 - Create binding for content with html content template
-- Components (<>)
-- Component Loader
+- SubModels (submodel)
+- Components (component)
+- Component Loader (component-loader)
