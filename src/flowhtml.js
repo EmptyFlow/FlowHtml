@@ -57,7 +57,15 @@ function registerModels() {
 
                     const relatedState = innerState[name];
                     relatedState.value = value;
-                    for (const binding of relatedState.bindings) binding.handler.apply(window, binding.args)
+                    const needDeleteBindings = []
+                    for (const binding of relatedState.bindings) {
+                        if (binding.element) {
+                            binding.handler.apply(window, binding.args)
+                        } else {
+                            needDeleteBindings.push(binding);
+                        }
+                    }
+                    if (needDeleteBindings.length) relatedState.bindings = relatedState.bindings.filter(a => !needDeleteBindings.find( b => b === a))
                     relatedState.changedHandler();
                 }
             })
@@ -145,8 +153,19 @@ function createBindingForEvent(element, attribute, models) {
 function attributeContentBinding(content, element, attribute) {
     return `element.setAttribute('${attribute.substring(2)}', ${content})`;
 }
-function contentBinding(content, element, attribute) {
-    return `element.innerHTML = ${content}`;
+function contentBinding(content, element) {
+    if (content) return `element.innerHTML = ${content}`;
+
+    let innerContent = element.innerHTML.replace(/{{(.*?)}}/g, "' + $1 + '");
+    if (innerContent.length > 1) {
+        if (innerContent[innerContent.length - 1] !== "'") innerContent += "'";
+        if (innerContent[0] !== "'") innerContent = "'" + innerContent;
+    } else {
+        innerContent = "''";
+    }
+
+    const body = "element.innerHTML = " + innerContent;
+    return body
 }
 function registerBindings() {
     const elements = document.querySelectorAll('[h-model]');

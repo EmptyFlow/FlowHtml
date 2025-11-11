@@ -25,6 +25,7 @@
 </model>
 <div style="display: flex; flex-direction: row;">
   <span h-model="#mymodel as model" h-content="model.count"></span>
+  <span h-model="#mymodel as model" h-content><span style="color: blueviolet;"><b>{{ model.count }}</b></span></span>
   <span h-model="#mymodel as model" h-class="model.attValue">Text</span>
 </div>
 <div style="display: flex; flex-direction: column;">
