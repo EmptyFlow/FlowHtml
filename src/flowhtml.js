@@ -67,7 +67,9 @@ function registerModels() {
                     }
                     if (needDeleteBindings.length) relatedState.bindings = relatedState.bindings.filter(a => !needDeleteBindings.find( b => b === a))
                     relatedState.changedHandler();
-                }
+                },
+                configurable: false,
+                enumerable: true
             })
         }
 
@@ -164,8 +166,7 @@ function contentBinding(content, element) {
         innerContent = "''";
     }
 
-    const body = "element.innerHTML = " + innerContent;
-    return body
+    return "element.innerHTML = " + innerContent;
 }
 function registerBindings() {
     const elements = document.querySelectorAll('[h-model]');
