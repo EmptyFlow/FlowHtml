@@ -78,24 +78,39 @@ function registerModels() {
     }
 }
 
+function getModelFromSelectorCache(selector, cacheSelectors) {
+    if (selector[0] === '#' && cacheSelectors.has(selector)) {
+        return cacheSelectors.get(selector);
+    } else {
+        const element = document.querySelector(selector);
+        if (selector[0] === '#' && element) cacheSelectors.set(selector, element);
+        return element;
+    }
+}
+
 function getModelFromValue(modelValue, cacheSelectors) {
     const parts = modelValue.split(',');
     const result = []
     for (const part of parts) {
         const asIndex = part.indexOf(' as ');
-        if (asIndex > -1) {
+        if (asIndex > -1) { // case <selector> as <modelName>
             const selector = part.substring(0, asIndex);
             const modelName = part.substring(asIndex + 4);
-            let element = null;
-            if (selector[0] === '#' && cacheSelectors.has(selector)) {
-                element = cacheSelectors.get(selector);
-            } else {
-                element = document.querySelector(selector);
-                if (selector[0] === '#') cacheSelectors.set(selector, element);
+            let element = getModelFromSelectorCache(selector, cacheSelectors);
+            if (!element) {
+                /* debug warning */ console.warn(`Can't create binding for model by selector ${selector}`);
+                continue;
             }
-            if (!element) continue;
 
             result.push({ model: modelLinks[element], modelName });
+        } else { // case <selector>
+            element = getModelFromSelectorCache(part, cacheSelectors);
+            if (!element) {
+                /* debug warning */ console.warn(`Can't create binding for model by selector ${selector}`);
+                continue;
+            }
+
+            result.push({ model: modelLinks[element], modelName: 'model' });
         }
     }
 
@@ -202,7 +217,7 @@ function flowHtmlInit() {
 }
 flowHtmlInit();
 
-function getModelBySelector(selector) {
+/* export */ function getModelBySelector(selector) {
     const element = document.querySelector(selector);
     if (!element) return;
     return modelLinks[element]

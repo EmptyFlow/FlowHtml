@@ -25,8 +25,8 @@
 </model>
 <div style="display: flex; flex-direction: row;">
   <span h-model="#mymodel as model" h-content="model.count"></span>
-  <span h-model="#mymodel as model" h-content><span style="color: blueviolet;"><b>{{ model.count }}</b></span></span>
-  <span h-model="#mymodel as model" h-class="model.attValue">Text</span>
+  <span h-model="#mymodel" h-content><span style="color: blueviolet;"><b>{{ model.count }}</b></span></span>
+  <span h-model="#mymodel" h-class="model.attValue">Text</span>
 </div>
 <div style="display: flex; flex-direction: column;">
   <button h-model="#mymodel as model" e-click="model.clickHandler({event,model,element})">Add number</button>
@@ -34,9 +34,30 @@
 </div>
 <script src="flowhtml.js"></script>
 <script>
-//import { getModelBySelector } from './flowhtml.js'
 
-/*const model = getModelBySelector('#mymodel');
+/*
+
+<loop h-model="#mymodel as model" index="model.iteratorArray = item" iterator="item of model.array">
+    <div>
+      <span h-content="model.iteratorArray"></span>
+      <loop index="let pizda = prop" iterator="prop of item.properties">
+        <span h-content="pizda"></span>
+      </loop>
+    </div>
+  </loop>
+
+var content = '';
+for(item of model.array) {
+  model.iteratorArray = item;
+
+  content += '<div> <span h-content="model.iteratorArray"></span>';
+
+  for(prop of item.properties) {
+    content += 
+  }
+}
+
+const model = getModelBySelector('#mymodel');
 
 setInterval(() => {
   model.count = model.count + 1;
