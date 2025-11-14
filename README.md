@@ -1,5 +1,5 @@
 # FlowHtml
-Reactive JavaScript Library
+Micro JavaScript Reactive Library
 
 ## Roadmap
 - ~~Create models from html(model)~~
@@ -8,6 +8,5 @@ Reactive JavaScript Library
 - ~~Create binding for HTML events (e-X)~~
 - ~~Create binding for content with html content template~~
 - Create binding for loops
-- SubModels (submodel)
 - Components (component)
 - Component Loader (component-loader)
