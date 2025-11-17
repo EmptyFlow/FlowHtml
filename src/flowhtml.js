@@ -13,6 +13,47 @@ function getTypeValue(value, type) {
     }
 }
 
+function createPropertyInModel(fullModel, name, propertyValue) {
+    const innerModel = fullModel[internalStateKey];
+    innerModel[name] = {
+        value: propertyValue,
+        bindings: [],
+        changedHandler: function() {}
+    };
+
+    Object.defineProperty(fullModel, name, {
+        get() {
+            const innerState = fullModel[internalStateKey]
+            if (!innerState) return null
+            if (!Object.hasOwn(innerState, name)) return null
+
+            if (needWatchaffectedProperties) affectedProperties.push({relatedModel: fullModel, field: name});
+
+            return innerState[name].value
+        },
+        set(value) {
+            const innerState = fullModel[internalStateKey]
+            if (!innerState) return null
+            if (!Object.hasOwn(innerState, name)) return null
+
+            const relatedState = innerState[name];
+            relatedState.value = value;
+            const needDeleteBindings = []
+            for (const binding of relatedState.bindings) {
+                if (binding.element) {
+                    binding.handler.apply(window, binding.args)
+                } else {
+                    needDeleteBindings.push(binding);
+                }
+            }
+            if (needDeleteBindings.length) relatedState.bindings = relatedState.bindings.filter(a => !needDeleteBindings.find( b => b === a))
+            relatedState.changedHandler();
+        },
+        configurable: false,
+        enumerable: true
+    })
+}
+
 function registerModels() {
     const models = document.getElementsByTagName('model');
     for (const model of models) {
@@ -34,43 +75,7 @@ function registerModels() {
                 propertyValue = defaultValue ? getTypeValue(defaultValue, type) : null;
             }
 
-            internalObject[name] = {
-                value: propertyValue,
-                bindings: [],
-                changedHandler: function() {}
-            };
-
-            Object.defineProperty(modelFullObject, name, {
-                get() {
-                    const innerState = modelFullObject[internalStateKey]
-                    if (!innerState) return null
-                    if (!Object.hasOwn(innerState, name)) return null
-
-                    if (needWatchaffectedProperties) affectedProperties.push({relatedModel: modelFullObject, field: name});
-
-                    return innerState[name].value
-                },
-                set(value) {
-                    const innerState = modelFullObject[internalStateKey]
-                    if (!innerState) return null
-                    if (!Object.hasOwn(innerState, name)) return null
-
-                    const relatedState = innerState[name];
-                    relatedState.value = value;
-                    const needDeleteBindings = []
-                    for (const binding of relatedState.bindings) {
-                        if (binding.element) {
-                            binding.handler.apply(window, binding.args)
-                        } else {
-                            needDeleteBindings.push(binding);
-                        }
-                    }
-                    if (needDeleteBindings.length) relatedState.bindings = relatedState.bindings.filter(a => !needDeleteBindings.find( b => b === a))
-                    relatedState.changedHandler();
-                },
-                configurable: false,
-                enumerable: true
-            })
+            createPropertyInModel(modelFullObject, name, propertyValue);
         }
 
         modelLinks[model] = modelFullObject;
@@ -183,12 +188,14 @@ function contentBinding(content, element) {
 
     return "element.innerHTML = " + innerContent;
 }
-function registerBindings() {
-    const elements = document.querySelectorAll('[h-model]');
+function registerBindings(root, extraModels) {
+    const elements = root ? root.querySelectorAll('[h-model]') : document.querySelectorAll('[h-model]');
     const modelSelectorBindings = new Map();
     for (const element of elements) {
-        const modelData = getModelFromValue(element.getAttribute('h-model'), modelSelectorBindings);
+        let modelData = getModelFromValue(element.getAttribute('h-model'), modelSelectorBindings);
         if (!modelData.length) continue;
+
+        if (extraModels) modelData = modelData.concat(extraModels);
 
         const attributes = element.getAttributeNames()
         for (const attribute of attributes) {
@@ -208,6 +215,48 @@ function registerBindings() {
         }
         
         element.removeAttribute('h-model');
+    }
+}
+function loopPerformer(element, arr, htmlBody) {
+    const fragment = document.createDocumentFragment();
+    for (const item of arr) {
+        const templateElement = document.createElement('template');
+        templateElement.innerHTML = htmlBody;
+        
+        registerBindings(templateElement.content, [item]);
+
+        fragment.appendChild(templateElement);
+    }
+
+    element.innerHTML = "";
+    element.appendChild(fragment);
+}
+function registerLoops() {
+    const loops = document.getElementsByTagName('loop');
+    for (const loop of loops) {
+        const loopContent = loop.innerHTML;
+        const index = loop.getAttribute('index');
+        let modelData = getModelFromValue(element.getAttribute('model'), modelSelectorBindings);
+        if (!modelData.length) continue;
+        
+        const functionBody = `loopPerformer(loopElement, ${index}, htmlBody)`;
+        const loopFunctionParameters = ['loopPerformer', 'htmlBody','loopElement'].concat(models.map(a => a.modelName));
+        const loopFunctionArguments = [loopPerformer, loopContent, loop].concat(models.map(a => a.model));
+
+        const loopFunction = new Function(loopFunctionParameters, functionBody);
+        const binding = {
+            element: loop,
+            args: loopFunctionArguments,
+            handler: loopFunction
+        };
+
+        const modelParts = index.split('.');
+        if (modelParts.length === 2) {
+            const relatedModel = modelData.find(a => a.modelName === modelParts[0]).model;
+            const relatedProperty = modelParts[1];
+
+            relatedModel[internalStateKey][relatedProperty].bindings.push(binding);
+        }
     }
 }
 

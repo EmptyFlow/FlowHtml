@@ -37,7 +37,7 @@
 
 /*
 
-<loop h-model="#mymodel as model" index="model.iteratorArray = item" iterator="item of model.array">
+<loop model="#mymodel as model" index="model.iteratorArray">
     <div>
       <span h-content="model.iteratorArray"></span>
       <loop index="let pizda = prop" iterator="prop of item.properties">
@@ -45,6 +45,13 @@
       </loop>
     </div>
   </loop>
+
+function handleLoop(content) {
+  for(item of model.array) {
+    registerBindings();
+    registerLoops();
+  }
+}
 
 var content = '';
 for(item of model.array) {
