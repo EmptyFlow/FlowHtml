@@ -22,7 +22,10 @@
       model.attValue = "activate-block";
     }
   </property>
-  <property name="items" type="array" default='[{"id": 22},{"id": 23},{"id": 24}]' />
+  <property name="items" type="array" default='[]' />
+  <init>
+    model.items = [{id: 22},{id: 23},{id: 24}];
+  </init>
 </model>
 <div style="display: flex; flex-direction: row;">
   <span h-model="#mymodel as model" h-content="model.count"></span>

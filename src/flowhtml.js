@@ -58,6 +58,8 @@ function registerModels() {
     const models = document.getElementsByTagName('model');
     for (const model of models) {
         const properties = model.querySelectorAll('property');
+        const init = model.querySelector('init');
+        const initScript = init ? init.innerHTML : '';
         const internalObject = {}
         const modelFullObject = {}
         modelFullObject[internalStateKey] = internalObject
@@ -76,6 +78,11 @@ function registerModels() {
             }
 
             createPropertyInModel(modelFullObject, name, propertyValue);
+        }
+
+        if (initScript) {
+            const initFunction = new Function(['model'], initScript);
+            initFunction(modelFullObject);
         }
 
         modelLinks[model] = modelFullObject;
