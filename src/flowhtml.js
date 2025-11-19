@@ -82,6 +82,9 @@ function registerModels() {
         model.innerHTML = '';
     }
 }
+function addBindingToProperty(model, property, binding) {
+    model[internalStateKey][property].bindings.push(binding);
+}
 
 function getModelFromSelectorCache(selector, cacheSelectors) {
     if (selector[0] === '#' && cacheSelectors.has(selector)) {
@@ -92,7 +95,6 @@ function getModelFromSelectorCache(selector, cacheSelectors) {
         return element;
     }
 }
-
 function getModelFromValue(modelValue, cacheSelectors) {
     const parts = modelValue.split(',');
     const result = []
@@ -149,7 +151,7 @@ function createBindingForAttribute(element, attribute, models, contentCallback, 
                 args: functionArguments,
                 handler: bindingHandler
             }
-            affectedPropertyItem.relatedModel[internalStateKey][affectedPropertyItem.field].bindings.push(binding);
+            addBindingToProperty(affectedPropertyItem.relatedModel, affectedPropertyItem.field, binding);
         }
     }
 
@@ -197,6 +199,12 @@ function registerBindings(root, extraModels) {
 
         if (extraModels) modelData = modelData.concat(extraModels);
 
+        const loopAttribute = element.getAttribute('h-loop');
+        if (loopAttribute) {
+            registerLoop(element, modelData);
+            continue;
+        }
+
         const attributes = element.getAttributeNames()
         for (const attribute of attributes) {
             if (attribute === `h-model`) continue;
@@ -217,46 +225,53 @@ function registerBindings(root, extraModels) {
         element.removeAttribute('h-model');
     }
 }
-function loopPerformer(element, arr, htmlBody) {
+
+function loopPerformer(element, arr, htmlBody, itemName) {
     const fragment = document.createDocumentFragment();
     for (const item of arr) {
         const templateElement = document.createElement('template');
         templateElement.innerHTML = htmlBody;
         
-        registerBindings(templateElement.content, [item]);
+        registerBindings(templateElement.content, [{modelName: itemName, model: item}]);
 
-        fragment.appendChild(templateElement);
+        fragment.appendChild(templateElement.content);
     }
 
     element.innerHTML = "";
     element.appendChild(fragment);
 }
-function registerLoops() {
-    const loops = document.getElementsByTagName('loop');
-    for (const loop of loops) {
-        const loopContent = loop.innerHTML;
-        const index = loop.getAttribute('index');
-        let modelData = getModelFromValue(element.getAttribute('model'), modelSelectorBindings);
-        if (!modelData.length) continue;
-        
-        const functionBody = `loopPerformer(loopElement, ${index}, htmlBody)`;
-        const loopFunctionParameters = ['loopPerformer', 'htmlBody','loopElement'].concat(models.map(a => a.modelName));
-        const loopFunctionArguments = [loopPerformer, loopContent, loop].concat(models.map(a => a.model));
+function registerLoop(loop, modelData) {
+    if (!modelData.length) return;
 
-        const loopFunction = new Function(loopFunctionParameters, functionBody);
-        const binding = {
-            element: loop,
-            args: loopFunctionArguments,
-            handler: loopFunction
-        };
+    const template = loop.children[0];
+    const loopContent = template.innerHTML;
+    const fullIndex = loop.getAttribute('h-loop').split(' as ');
+    loop.removeAttribute('h-loop');
+    const index = fullIndex[0].trim();
+    const indexName = fullIndex[1].trim();
 
-        const modelParts = index.split('.');
-        if (modelParts.length === 2) {
-            const relatedModel = modelData.find(a => a.modelName === modelParts[0]).model;
-            const relatedProperty = modelParts[1];
+    const functionBody = `loopPerformer(loopElement, ${index}, htmlBody, itemName)`;
+    const loopFunctionParameters = ['loopPerformer', 'htmlBody','loopElement','itemName'].concat(modelData.map(a => a.modelName));
+    const loopFunctionArguments = [loopPerformer, loopContent, loop, indexName].concat(modelData.map(a => a.model));
 
-            relatedModel[internalStateKey][relatedProperty].bindings.push(binding);
-        }
+    const loopFunction = new Function(loopFunctionParameters, functionBody);
+
+    const modelParts = index.split('.');
+    if (modelParts.length === 2) {
+        const relatedModel = modelData.find(a => a.modelName === modelParts[0]).model;
+        const relatedProperty = modelParts[1];
+
+        addBindingToProperty(
+            relatedModel,
+            relatedProperty,
+            {
+                element: loop,
+                args: loopFunctionArguments,
+                handler: loopFunction
+            }
+        );
+
+        loopFunction.apply(window, loopFunctionArguments);
     }
 }
 
