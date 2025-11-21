@@ -5,18 +5,20 @@ let needWatchaffectedProperties = false;
 
 function getTypeValue(value, type) {
     switch (type) {
-        case 'int': return parseInt(value)
-        case 'double': return parseFloat(value)
-        case 'string': return value
-        case 'array': return JSON.parse(value)
-        case 'object': return JSON.parse(value)
+        case 'int': return parseInt(value);
+        case 'double': return parseFloat(value);
+        case 'string': return value;
+        case 'array': return value === '[]' ? [] : null;
+        case 'object': return value === '{}' ? {} : null;
     }
 }
 
-function createPropertyInModel(fullModel, name, propertyValue) {
+function createPropertyInModel(fullModel, params) {
+    const { name, value } = params;
+
     const innerModel = fullModel[internalStateKey];
     innerModel[name] = {
-        value: propertyValue,
+        value: value,
         bindings: [],
         changedHandler: function() {}
     };
@@ -77,7 +79,7 @@ function registerModels() {
                 propertyValue = defaultValue ? getTypeValue(defaultValue, type) : null;
             }
 
-            createPropertyInModel(modelFullObject, name, propertyValue);
+            createPropertyInModel(modelFullObject, {name, value: propertyValue, type});
         }
 
         if (initScript) {
