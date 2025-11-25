@@ -13,8 +13,18 @@ function getTypeValue(value, type) {
     }
 }
 
+function checkTypeValue(value, type) {
+    switch (type) {
+        case 'int': return typeof value === 'number';
+        case 'double': return typeof value === 'number';
+        case 'string': return typeof value === 'string';
+        case 'array': return value === '[]' ? [] : null;
+        case 'object': return value === '{}' ? {} : null;
+    }
+}
+
 function createPropertyInModel(fullModel, params) {
-    const { name, value } = params;
+    const { name, value, type } = params;
 
     const innerModel = fullModel[internalStateKey];
     innerModel[name] = {
@@ -34,9 +44,11 @@ function createPropertyInModel(fullModel, params) {
             return innerState[name].value
         },
         set(value) {
+            if (!checkTypeValue(value, type)) return;
+
             const innerState = fullModel[internalStateKey]
             if (!innerState) return null
-            if (!Object.hasOwn(innerState, name)) return null
+            if (!Object.hasOwn(innerState, name)) return;
 
             const relatedState = innerState[name];
             relatedState.value = value;
