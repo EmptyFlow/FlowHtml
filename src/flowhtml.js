@@ -18,8 +18,8 @@ function checkTypeValue(value, type) {
         case 'int': return typeof value === 'number';
         case 'double': return typeof value === 'number';
         case 'string': return typeof value === 'string';
-        case 'array': return value === '[]' ? [] : null;
-        case 'object': return value === '{}' ? {} : null;
+        case 'array': return Array.isArray(value);
+        case 'object': return typeof value === 'object';
     }
 }
 
@@ -222,7 +222,7 @@ function registerBindings(root, extraModels) {
 
         const loopAttribute = element.getAttribute('h-loop');
         if (loopAttribute) {
-            registerLoop(element, modelData);
+            registerLoop(element, modelData, extraModels);
             continue;
         }
 
@@ -247,13 +247,13 @@ function registerBindings(root, extraModels) {
     }
 }
 
-function loopPerformer(element, arr, htmlBody, itemName) {
+function loopPerformer(element, arr, htmlBody, itemName, extraModels) {
     const fragment = document.createDocumentFragment();
     for (const item of arr) {
         const templateElement = document.createElement('template');
         templateElement.innerHTML = htmlBody;
         
-        registerBindings(templateElement.content, [{modelName: itemName, model: item}]);
+        registerBindings(templateElement.content, extraModels.concat([{modelName: itemName, model: item}]));
 
         fragment.appendChild(templateElement.content);
     }
@@ -261,7 +261,7 @@ function loopPerformer(element, arr, htmlBody, itemName) {
     element.innerHTML = "";
     element.appendChild(fragment);
 }
-function registerLoop(loop, modelData) {
+function registerLoop(loop, modelData, extraModels) {
     if (!modelData.length) return;
 
     const template = loop.children[0];
@@ -271,9 +271,9 @@ function registerLoop(loop, modelData) {
     const index = fullIndex[0].trim();
     const indexName = fullIndex[1].trim();
 
-    const functionBody = `loopPerformer(loopElement, ${index}, htmlBody, itemName)`;
-    const loopFunctionParameters = ['loopPerformer', 'htmlBody','loopElement','itemName'].concat(modelData.map(a => a.modelName));
-    const loopFunctionArguments = [loopPerformer, loopContent, loop, indexName].concat(modelData.map(a => a.model));
+    const functionBody = `loopPerformer(loopElement, ${index}, htmlBody, itemName, extraModels)`;
+    const loopFunctionParameters = ['loopPerformer', 'htmlBody','loopElement','itemName', 'extraModels'].concat(modelData.map(a => a.modelName));
+    const loopFunctionArguments = [loopPerformer, loopContent, loop, indexName, extraModels].concat(modelData.map(a => a.model));
 
     const loopFunction = new Function(loopFunctionParameters, functionBody);
 
@@ -298,7 +298,7 @@ function registerLoop(loop, modelData) {
 
 function flowHtmlInit() {
     registerModels();
-    registerBindings();
+    registerBindings(null, []);
 }
 flowHtmlInit();
 
