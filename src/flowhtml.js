@@ -2,6 +2,7 @@ const modelLinks = {}
 const internalStateKey = Symbol();
 let affectedProperties = [];
 let needWatchaffectedProperties = false;
+const components = new Map();
 
 function getTypeValue(value, type) {
     switch (type) {
@@ -295,9 +296,20 @@ function registerLoop(loop, modelData, extraModels) {
         loopFunction.apply(window, loopFunctionArguments);
     }
 }
+function registerComponents() {
+    const components = document.getElementsByTagName('component');
+    for (const component of components) {
+        const properties = model.querySelectorAll('property');
+        const template = model.querySelector('template');
+        
+    }
+
+    components.add()
+}
 
 function flowHtmlInit() {
     registerModels();
+    registerComponents();
     registerBindings(null, []);
 }
 flowHtmlInit();
