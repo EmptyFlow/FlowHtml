@@ -27,6 +27,12 @@
     model.items = [{id: 22},{id: 23},{id: 24}];
   </init>
 </model>
+<component id="mycomponent" name="mycomponent">
+  <property name="count" type="int" default="5" />
+  <template>
+
+  </template>
+</component>
 <div style="display: flex; flex-direction: row;">
   <span h-model="#mymodel as model" h-content="model.count"></span>
   <span h-model="#mymodel" h-content><span style="color: blueviolet;"><b>{{ model.count }}</b></span></span>

@@ -2,7 +2,7 @@ const modelLinks = {}
 const internalStateKey = Symbol();
 let affectedProperties = [];
 let needWatchaffectedProperties = false;
-const components = new Map();
+const registeredComponents = new Map();
 
 function getTypeValue(value, type) {
     switch (type) {
@@ -27,9 +27,17 @@ function checkTypeValue(value, type) {
 function createPropertyInModel(fullModel, params) {
     const { name, value, type } = params;
 
+    let defaultValue
+    if (type === 'event-handler') {
+        const handlerParameters = [`data`]
+        defaultValue = new Function(...handlerParameters, value);
+    } else {
+        defaultValue = value ? getTypeValue(value, type) : null;
+    }
+
     const innerModel = fullModel[internalStateKey];
     innerModel[name] = {
-        value: value,
+        value: defaultValue,
         bindings: [],
         changedHandler: function() {}
     };
@@ -69,35 +77,43 @@ function createPropertyInModel(fullModel, params) {
     })
 }
 
+function createModel(properties) {
+    const internalObject = {}
+    const modelFullObject = {}
+    modelFullObject[internalStateKey] = internalObject
+
+    for (const property of properties) {
+        createPropertyInModel(modelFullObject, property);
+    }
+
+    return modelFullObject;
+}
+
+function getPropertyFromElement(element) {
+    const name = element.getAttribute('name')
+    const type = element.getAttribute('type')
+    if (!name || !type) return null;
+
+    const defaultValue = element.getAttribute('default')
+    let propertyValue = type === 'event-handler' ? element.innerHTML : defaultValue;
+
+    return { name: name, type: type, value: propertyValue };
+}
+
 function registerModels() {
     const models = document.getElementsByTagName('model');
     for (const model of models) {
         const properties = model.querySelectorAll('property');
         const init = model.querySelector('init');
         const initScript = init ? init.innerHTML : '';
-        const internalObject = {}
-        const modelFullObject = {}
-        modelFullObject[internalStateKey] = internalObject
+        const modelFullObject = createModel([])
         for (const property of properties) {
-            const name = property.getAttribute('name')
-            const type = property.getAttribute('type')
-            if (!name || !type) continue;
-
-            const defaultValue = property.getAttribute('default')
-            let propertyValue = null;
-            if (type === 'event-handler') {
-                const handlerParameters = [`data`]
-                propertyValue = new Function(...handlerParameters, property.innerHTML);
-            } else {
-                propertyValue = defaultValue ? getTypeValue(defaultValue, type) : null;
-            }
-
-            createPropertyInModel(modelFullObject, {name, value: propertyValue, type});
+            createPropertyInModel(modelFullObject, getPropertyFromElement(property));
         }
 
         if (initScript) {
-            const initFunction = new Function(['model'], initScript);
-            initFunction(modelFullObject);
+            const initFunction = new Function(['model', 'createModel'], initScript);
+            initFunction(modelFullObject, createModel);
         }
 
         modelLinks[model] = modelFullObject;
@@ -299,12 +315,38 @@ function registerLoop(loop, modelData, extraModels) {
 function registerComponents() {
     const components = document.getElementsByTagName('component');
     for (const component of components) {
-        const properties = model.querySelectorAll('property');
-        const template = model.querySelector('template');
-        
-    }
+        const componentName = component.getAttribute('name');
+        const properties = component.querySelectorAll('property');
+        const template = component.querySelector('template');
+        if(!componentName) {
+            /* debug warning */ console.warn(`Can't create component, attribute name is missing`);
+            continue;
+        }
+        if (registeredComponents.has(componentName)) {
+            /* debug warning */ console.warn(`Can't create component, component with name ${componentName} is already registered`);
+            continue;
+        }
+        if (!template) {
+            /* debug warning */ console.warn(`Can't create component, no template`);
+            continue;
+        }
 
-    components.add()
+        const model = {
+            template: template.innerHTML,
+            properties: []
+        }
+        for (const property of properties) {
+            const propertyModel = getPropertyFromElement(property)
+            model.properties.push(propertyModel)
+        }
+
+        if (!model.properties.length) {
+            /* debug warning */ console.warn(`Can't create component, no properties`);
+            continue;
+        }
+
+        registeredComponents.set(componentName, model);
+    }
 }
 
 function flowHtmlInit() {
