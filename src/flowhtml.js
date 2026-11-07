@@ -3,6 +3,7 @@ const internalStateKey = Symbol();
 let affectedProperties = [];
 let needWatchaffectedProperties = false;
 const registeredComponents = new Map();
+const instanciatedComponents = new Map();
 
 function getTypeValue(value, type) {
     switch (type) {
@@ -100,12 +101,21 @@ function getPropertyFromElement(element) {
     return { name: name, type: type, value: propertyValue };
 }
 
+function replaceHtmlEntites(value) {
+    return value
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>');
+}
+
 function registerModels() {
     const models = document.getElementsByTagName('model');
     for (const model of models) {
         const properties = model.querySelectorAll('property');
         const init = model.querySelector('init');
-        const initScript = init ? init.innerHTML : '';
+        const initScript = init ? replaceHtmlEntites(init.innerHTML) : '';
         const modelFullObject = createModel([])
         for (const property of properties) {
             createPropertyInModel(modelFullObject, getPropertyFromElement(property));
