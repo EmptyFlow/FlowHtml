@@ -179,6 +179,30 @@ function watchAffectedProperties(callback) {
 
     needWatchaffectedProperties = false;
 }
+function attributeContentBinding(content, element, attribute) {
+    return `element.setAttribute('${attribute.substring(2)}', ${content})`;
+}
+function contentBinding(content, element) {
+    if (content) return `element.innerHTML = ${content}`;
+
+    let innerContent = element.innerHTML.replace(/{{(.*?)}}/g, "' + $1 + '");
+    if (innerContent.length > 1) {
+        // if content have attributes also handle it
+        const attributes = innerContent.match(/h-[a-zA-Z]+="[^"]*"/g);
+        for (const attribute of attributes) {
+            const name = attribute.substring(2, attribute.indexOf('='));
+            const attributeContent = attribute.substring(attribute.indexOf('"') + 1, attribute.lastIndexOf('"'));
+            innerContent = innerContent.replaceAll(attribute, `${name}="' + ${attributeContent} + '"`);
+        }
+
+        if (innerContent[innerContent.length - 1] !== "'") innerContent += "'";
+        if (innerContent[0] !== "'") innerContent = "'" + innerContent;
+    } else {
+        innerContent = "''";
+    }
+
+    return "element.innerHTML = " + (innerContent.replaceAll('\n', ' ').replaceAll('\t', ''));
+}
 function createBindingForAttribute(element, attribute, models, contentCallback, contentRequired) {
     const content = element.getAttribute(attribute);
     if (contentRequired && !content) return;
@@ -187,7 +211,7 @@ function createBindingForAttribute(element, attribute, models, contentCallback, 
     functionItems.unshift('element');
     
     const functionArguments = models.map(a => a.model)
-    functionArguments.unshift(element)
+    functionArguments.unshift(element);
     const bindingHandler = new Function(...functionItems, contentCallback(content, element, attribute));
     watchAffectedProperties(() => {
         bindingHandler.apply(window, functionArguments)
@@ -221,22 +245,6 @@ function createBindingForEvent(element, attribute, models) {
     }
 
     element.removeAttribute(attribute);
-}
-function attributeContentBinding(content, element, attribute) {
-    return `element.setAttribute('${attribute.substring(2)}', ${content})`;
-}
-function contentBinding(content, element) {
-    if (content) return `element.innerHTML = ${content}`;
-
-    let innerContent = element.innerHTML.replace(/{{(.*?)}}/g, "' + $1 + '");
-    if (innerContent.length > 1) {
-        if (innerContent[innerContent.length - 1] !== "'") innerContent += "'";
-        if (innerContent[0] !== "'") innerContent = "'" + innerContent;
-    } else {
-        innerContent = "''";
-    }
-
-    return "element.innerHTML = " + innerContent;
 }
 function registerBindings(root, extraModels) {
     const elements = root ? root.querySelectorAll('[h-model]') : document.querySelectorAll('[h-model]');
